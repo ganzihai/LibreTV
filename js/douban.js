@@ -452,19 +452,17 @@ async function fetchDoubanData(url) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
     
-    // 设置请求选项，包括信号和头部
+    // 设置请求选项
     const fetchOptions = {
         signal: controller.signal,
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Referer': 'https://movie.douban.cmliussss.com/',
             'Accept': 'application/json, text/plain, */*',
         }
     };
 
     try {
-        // 尝试直接访问（豆瓣API可能允许部分CORS请求）
-        const response = await fetch(PROXY_URL + encodeURIComponent(url), fetchOptions);
+        // 直接请求 cmliussss 代理地址，不再套 PROXY_URL（避免双重代理）
+        const response = await fetch(url, fetchOptions);
         clearTimeout(timeoutId);
         
         if (!response.ok) {
@@ -473,9 +471,10 @@ async function fetchDoubanData(url) {
         
         return await response.json();
     } catch (err) {
-        console.error("豆瓣 API 请求失败（直接代理）：", err);
+        clearTimeout(timeoutId);
+        console.error("豆瓣 API 请求失败：", err);
         
-        // 失败后尝试备用方法：作为备选
+        // 失败后尝试备用方法
         const fallbackUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         
         try {
@@ -495,7 +494,7 @@ async function fetchDoubanData(url) {
             }
         } catch (fallbackErr) {
             console.error("豆瓣 API 备用请求也失败：", fallbackErr);
-            throw fallbackErr; // 向上抛出错误，让调用者处理
+            throw fallbackErr;
         }
     }
 }
@@ -537,7 +536,9 @@ function renderDoubanCards(data, container) {
             );
             
             // 备用代理URL（走通用PROXY_URL）
-            const fallbackCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
+            const fallbackCoverUrl = typeof PROXY_URL !== 'undefined'
+                ? PROXY_URL + encodeURIComponent(originalCoverUrl)
+                : originalCoverUrl;
             
             // 为不同设备优化卡片布局
             card.innerHTML = `
