@@ -1,5 +1,9 @@
 // 豆瓣热门电影电视剧推荐功能
 
+// 豆瓣代理域名配置
+const DOUBAN_API_PROXY = 'https://movie.douban.cmliussss.com';
+const DOUBAN_IMG_PROXY = 'https://img.douban.cmliussss.com';
+
 // 豆瓣标签列表 - 修改为默认标签
 let defaultMovieTags = ['热门', '最新', '经典', '豆瓣高分', '冷门佳片', '华语', '欧美', '韩国', '日本', '动作', '喜剧', '爱情', '科幻', '悬疑', '恐怖', '治愈'];
 let defaultTvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片'];
@@ -382,7 +386,8 @@ function setupDoubanRefreshBtn() {
 }
 
 function fetchDoubanTags() {
-    const movieTagsTarget = `https://movie.douban.com/j/search_tags?type=movie`
+    // 使用豆瓣代理域名
+    const movieTagsTarget = `${DOUBAN_API_PROXY}/j/search_tags?type=movie`;
     fetchDoubanData(movieTagsTarget)
         .then(data => {
             movieTags = data.tags;
@@ -393,7 +398,7 @@ function fetchDoubanTags() {
         .catch(error => {
             console.error("获取豆瓣热门电影标签失败：", error);
         });
-    const tvTagsTarget = `https://movie.douban.com/j/search_tags?type=tv`
+    const tvTagsTarget = `${DOUBAN_API_PROXY}/j/search_tags?type=tv`;
     fetchDoubanData(tvTagsTarget)
        .then(data => {
             tvTags = data.tags;
@@ -423,7 +428,8 @@ function renderRecommend(tag, pageLimit, pageStart) {
     container.classList.add("relative");
     container.insertAdjacentHTML('beforeend', loadingOverlayHTML);
     
-    const target = `https://movie.douban.com/j/search_subjects?type=${doubanMovieTvCurrentSwitch}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`;
+    // 使用豆瓣代理域名
+    const target = `${DOUBAN_API_PROXY}/j/search_subjects?type=${doubanMovieTvCurrentSwitch}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`;
     
     // 使用通用请求函数
     fetchDoubanData(target)
@@ -451,7 +457,7 @@ async function fetchDoubanData(url) {
         signal: controller.signal,
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Referer': 'https://movie.douban.com/',
+            'Referer': 'https://movie.douban.cmliussss.com/',
             'Accept': 'application/json, text/plain, */*',
         }
     };
@@ -523,19 +529,22 @@ function renderDoubanCards(data, container) {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            // 处理图片URL
-            // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
+            // 处理图片URL：将豆瓣图片CDN域名替换为代理域名
             const originalCoverUrl = item.cover;
+            const proxiedCoverUrl = originalCoverUrl.replace(
+                /https?:\/\/[^/]*\.doubanio\.com/,
+                DOUBAN_IMG_PROXY
+            );
             
-            // 2. 也准备代理URL作为备选
-            const proxiedCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
+            // 备用代理URL（走通用PROXY_URL）
+            const fallbackCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
             
             // 为不同设备优化卡片布局
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${originalCoverUrl}" alt="${safeTitle}" 
+                    <img src="${proxiedCoverUrl}" alt="${safeTitle}" 
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
+                        onerror="this.onerror=null; this.src='${fallbackCoverUrl}'; this.classList.add('object-contain');"
                         loading="lazy" referrerpolicy="no-referrer">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
