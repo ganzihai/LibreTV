@@ -528,15 +528,9 @@ function renderDoubanCards(data, container) {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            // 处理图片URL：将豆瓣图片CDN域名替换为代理域名
+            // 处理图片URL：优先使用本地PROXY_URL代理，避免第三方代理不稳定
             const originalCoverUrl = item.cover;
-            const proxiedCoverUrl = originalCoverUrl.replace(
-                /https?:\/\/[^/]*\.doubanio\.com/,
-                DOUBAN_IMG_PROXY
-            );
-            
-            // 备用代理URL（走通用PROXY_URL）
-            const fallbackCoverUrl = typeof PROXY_URL !== 'undefined'
+            const proxiedCoverUrl = typeof PROXY_URL !== 'undefined'
                 ? PROXY_URL + encodeURIComponent(originalCoverUrl)
                 : originalCoverUrl;
             
@@ -545,7 +539,6 @@ function renderDoubanCards(data, container) {
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
                     <img src="${proxiedCoverUrl}" alt="${safeTitle}" 
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        onerror="this.onerror=null; this.src='${fallbackCoverUrl}'; this.classList.add('object-contain');"
                         loading="lazy" referrerpolicy="no-referrer">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
