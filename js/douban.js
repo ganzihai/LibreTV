@@ -1,7 +1,9 @@
 // 豆瓣热门电影电视剧推荐功能
 
 // 豆瓣代理域名配置
+// API代理：使用 cmliussss 的代理服务（阿里云CDN加速）
 const DOUBAN_API_PROXY = 'https://movie.douban.cmliussss.com';
+// 图片代理：使用 cmliussss 的CDN服务（阿里云加速），浏览器直连速度更快
 const DOUBAN_IMG_PROXY = 'https://img.douban.cmliussss.com';
 
 // 豆瓣标签列表 - 修改为默认标签
@@ -528,17 +530,27 @@ function renderDoubanCards(data, container) {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
             
-            // 处理图片URL：优先使用本地PROXY_URL代理，避免第三方代理不稳定
+            // 处理图片URL：使用cmliussss的CDN代理服务（阿里云加速）
+            // 原理：豆瓣图片有防盗链，通过CDN代理绕过Referer限制，浏览器直连速度快
             const originalCoverUrl = item.cover;
-            const proxiedCoverUrl = typeof PROXY_URL !== 'undefined'
+            
+            // 将豆瓣图片CDN域名替换为cmliussss的CDN代理
+            const proxiedCoverUrl = originalCoverUrl.replace(
+                /https?:\/\/[^/]*\.douban(?:io)?\.com/,
+                DOUBAN_IMG_PROXY
+            );
+            
+            // 备用方案：如果替换失败，使用本地PROXY_URL代理
+            const fallbackCoverUrl = (proxiedCoverUrl === originalCoverUrl && typeof PROXY_URL !== 'undefined')
                 ? PROXY_URL + encodeURIComponent(originalCoverUrl)
-                : originalCoverUrl;
+                : proxiedCoverUrl;
             
             // 为不同设备优化卡片布局
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
                     <img src="${proxiedCoverUrl}" alt="${safeTitle}" 
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                        onerror="this.onerror=null; this.src='${fallbackCoverUrl}'; this.classList.add('object-contain');"
                         loading="lazy" referrerpolicy="no-referrer">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
