@@ -425,6 +425,40 @@ export async function onRequest(context) {
 
         logDebug(`收到代理请求: ${targetUrl}`);
 
+        const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif', '.heic', '.ico'];
+        const isImageUrl = IMAGE_EXTENSIONS.some(ext => {
+            const lowerUrl = targetUrl.toLowerCase();
+            return lowerUrl.includes(ext + '?') || lowerUrl.endsWith(ext);
+        });
+
+        if (isImageUrl) {
+            logDebug(`检测到图片请求，直接代理: ${targetUrl}`);
+
+            const imageHeaders = new Headers({
+                'User-Agent': getRandomUserAgent(),
+                'Accept': 'image/*,*/*',
+                'Referer': new URL(targetUrl).origin
+            });
+
+            const imageResponse = await fetch(targetUrl, { headers: imageHeaders, redirect: 'follow' });
+
+            if (!imageResponse.ok) {
+                logDebug(`图片请求失败: ${imageResponse.status} ${imageResponse.statusText} - ${targetUrl}`);
+                return createResponse(`图片请求失败: ${imageResponse.status}`, imageResponse.status);
+            }
+
+            const responseHeaders = new Headers(imageResponse.headers);
+            responseHeaders.set('Cache-Control', `public, max-age=${CACHE_TTL}`);
+            responseHeaders.set('Access-Control-Allow-Origin', '*');
+            responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+            responseHeaders.set('Access-Control-Allow-Headers', '*');
+
+            return new Response(imageResponse.body, {
+                status: 200,
+                headers: responseHeaders
+            });
+        }
+
         // --- 缓存检查 (KV) ---
         const cacheKey = `proxy_raw:${targetUrl}`; // 使用原始内容的缓存键
         let kvNamespace = null;

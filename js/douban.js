@@ -273,13 +273,21 @@ function handleDoubanImgError(img) {
     const retries = parseInt(img.dataset.retries || '0');
     if (retries === 0) {
         img.dataset.retries = '1';
+        const cdnUrl = img.dataset.cdn;
+        if (cdnUrl) {
+            img.src = cdnUrl;
+            return;
+        }
+    }
+    if (retries === 1) {
+        img.dataset.retries = '2';
         const originalUrl = img.dataset.original;
         if (originalUrl) {
             img.src = originalUrl;
             return;
         }
     }
-    img.dataset.retries = '2';
+    img.dataset.retries = '3';
     img.onerror = null;
     img.src = 'image/nomedia.png';
     img.classList.add('object-contain');
@@ -309,20 +317,25 @@ function renderDoubanCards(data, container) {
                 .replace(/>/g, '&gt;');
 
             const originalCoverUrl = item.cover;
-            const proxiedCoverUrl = originalCoverUrl.replace(
+            const proxyCoverUrl = typeof PROXY_URL !== 'undefined'
+                ? PROXY_URL + encodeURIComponent(originalCoverUrl)
+                : originalCoverUrl;
+            const cdnCoverUrl = originalCoverUrl.replace(
                 /https?:\/\/[^/]*\.douban(?:io)?\.com/,
                 DOUBAN_IMG_PROXY
             );
 
             const escapedOriginal = originalCoverUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            const escapedCdn = cdnCoverUrl.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${proxiedCoverUrl}" alt="${safeTitle}"
+                    <img src="${proxyCoverUrl}" alt="${safeTitle}"
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                         data-original="${escapedOriginal}"
+                        data-cdn="${escapedCdn}"
                         onerror="handleDoubanImgError(this)"
-                        loading="lazy" referrerpolicy="no-referrer">
+                        loading="lazy">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
                         <span class="text-yellow-400">★</span> ${safeRate}

@@ -366,6 +366,48 @@ export default async function handler(req, res) {
 
         console.info(`开始处理目标 URL 的代理请求: ${targetUrl}`);
 
+        const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif', '.heic', '.ico'];
+        const isImageUrl = IMAGE_EXTENSIONS.some(ext => {
+            const lowerUrl = targetUrl.toLowerCase();
+            return lowerUrl.includes(ext + '?') || lowerUrl.endsWith(ext);
+        });
+
+        if (isImageUrl) {
+            console.info(`检测到图片请求，直接代理: ${targetUrl}`);
+
+            const imageHeaders = {
+                'User-Agent': getRandomUserAgent(),
+                'Accept': 'image/*,*/*',
+                'Referer': new URL(targetUrl).origin
+            };
+
+            const imageResponse = await fetch(targetUrl, { headers: imageHeaders, redirect: 'follow' });
+
+            if (!imageResponse.ok) {
+                throw new Error(`图片请求失败: ${imageResponse.status}`);
+            }
+
+            const imageBuffer = await imageResponse.buffer();
+
+            const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Cache-Control', `public, max-age=${CACHE_TTL}`);
+
+            imageResponse.headers.forEach((value, key) => {
+                const lowerKey = key.toLowerCase();
+                if (!lowerKey.startsWith('access-control-') &&
+                    lowerKey !== 'content-encoding' &&
+                    lowerKey !== 'content-length' &&
+                    lowerKey !== 'content-type' &&
+                    lowerKey !== 'cache-control') {
+                    res.setHeader(key, value);
+                }
+            });
+
+            res.status(200).send(imageBuffer);
+            return;
+        }
+
         // --- 获取并处理目标内容 ---
         const { content, contentType, responseHeaders } = await fetchContentWithType(targetUrl, req.headers);
 

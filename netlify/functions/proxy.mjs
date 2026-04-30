@@ -210,6 +210,43 @@ export const handler = async (event, context) => {
     logDebug(`Processing proxy request for target: ${targetUrl}`);
 
     try {
+        const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif', '.heic', '.ico'];
+        const isImageUrl = IMAGE_EXTENSIONS.some(ext => {
+            const lowerUrl = targetUrl.toLowerCase();
+            return lowerUrl.includes(ext + '?') || lowerUrl.endsWith(ext);
+        });
+
+        if (isImageUrl) {
+            logDebug(`Detected image request, proxying directly: ${targetUrl}`);
+
+            const imageHeaders = {
+                'User-Agent': getRandomUserAgent(),
+                'Accept': 'image/*,*/*',
+                'Referer': new URL(targetUrl).origin
+            };
+
+            const imageResponse = await fetch(targetUrl, { headers: imageHeaders, redirect: 'follow' });
+
+            if (!imageResponse.ok) {
+                throw new Error(`Image request failed: ${imageResponse.status}`);
+            }
+
+            const imageBuffer = await imageResponse.buffer();
+            const imageBase64 = imageBuffer.toString('base64');
+            const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+
+            return {
+                statusCode: 200,
+                headers: {
+                    ...corsHeaders,
+                    'Content-Type': contentType,
+                    'Cache-Control': `public, max-age=${CACHE_TTL}`,
+                },
+                body: imageBase64,
+                isBase64Encoded: true,
+            };
+        }
+
         // Fetch Original Content (Pass Netlify event headers)
         const { content, contentType, responseHeaders } = await fetchContentWithType(targetUrl, event.headers);
 
