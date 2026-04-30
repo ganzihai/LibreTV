@@ -11,56 +11,6 @@ let currentVideoTitle = '';
 // 全局变量用于倒序状态
 let episodesReversed = false;
 
-
-// 在新标签页/窗口打开页面；若被浏览器拦截则回退到当前页打开
-function openInNewTab(url) {
-    const newWin = window.open(url, '_blank', 'noopener,noreferrer');
-    if (newWin) {
-        // 防止新开页通过 window.opener 控制原页面（安全）
-        newWin.opener = null;
-    } else {
-        // 弹窗被拦截时兜底
-        window.location.href = url;
-    }
-}
-
-// 点击搜索结果时：在新标签页打开详情/选集页（watch.html）
-function openWatchDetails(vodId, vodName, sourceCode) {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
-        }
-    }
-
-    const currentPath = window.location.href;
-
-    const params = new URLSearchParams();
-    params.set('id', vodId || '');
-    params.set('source', sourceCode || '');
-    if (vodName) params.set('title', vodName);
-
-    // 仅在首页进入时记录 back，便于 watch.html 返回
-    if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
-        params.set('back', currentPath);
-    }
-
-    // 记录一些必要状态（可选，但对返回/历史更友好）
-    try {
-        localStorage.setItem('currentVideoTitle', vodName || '未知视频');
-        localStorage.setItem('currentSourceCode', sourceCode || '');
-        localStorage.setItem('lastSearchPage', currentPath);
-        localStorage.setItem('lastPageUrl', currentPath);
-        localStorage.setItem('lastPlayTime', Date.now());
-    } catch (e) {
-        console.error('保存跳转状态失败:', e);
-    }
-
-    const watchUrl = `watch.html?${params.toString()}`;
-    openInNewTab(watchUrl);
-}
-
 // 页面初始化
 document.addEventListener('DOMContentLoaded', function () {
     // 初始化API复选框
@@ -763,7 +713,7 @@ async function search() {
 
             return `
                 <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md" 
-                     onclick="openWatchDetails('${safeId}','${safeName}','${sourceCode}')" ${apiUrlAttr}>
+                     onclick="showDetails('${safeId}','${safeName}','${sourceCode}')" ${apiUrlAttr}>
                     <div class="flex h-full">
                         ${hasCover ? `
                         <div class="relative flex-shrink-0 search-card-img-container">
@@ -1035,8 +985,8 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0, vodId = '') {
         console.error('保存播放状态失败:', e);
     }
 
-    // 在新标签页中打开播放页面
-    openInNewTab(watchUrl);
+    // 在当前标签页中打开播放页面
+    window.location.href = watchUrl;
 }
 
 // 弹出播放器页面
