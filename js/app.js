@@ -1,3 +1,14 @@
+// 新开标签页/窗口：优先 window.open，若被拦截则回退到当前页打开
+function openInNewTab(url) {
+  const newWin = window.open(url, "_blank", "noopener,noreferrer");
+  if (newWin) {
+    // 防止新开页通过 window.opener 控制原页面（安全）
+    newWin.opener = null;
+  } else {
+    // 弹窗被拦截时兜底
+    window.location.href = url;
+  }
+}
 // 全局变量
 let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["tyyszy","dyttzy", "bfzy", "ruyi"]'); // 默认选中资源
 let customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]'); // 存储自定义API列表
@@ -962,32 +973,38 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0, vodId = '') {
     }
 
     // 获取当前路径作为返回页面
-    let currentPath = window.location.href;
+let currentPath = window.location.href;
 
-    // 构建播放页面URL，使用watch.html作为中间跳转页
-    let watchUrl = `watch.html?id=${vodId || ''}&source=${sourceCode || ''}&url=${encodeURIComponent(url)}&index=${episodeIndex}&title=${encodeURIComponent(vod_name || '')}`;
+const params = new URLSearchParams();
+params.set('id', vodId || '');
+params.set('source', sourceCode || '');
+params.set('url', url || '');                 // URLSearchParams 会自动编码
+params.set('index', String(episodeIndex ?? ''));
+params.set('title', vod_name || '');
 
-    // 添加返回URL参数
-    if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
-        watchUrl += `&back=${encodeURIComponent(currentPath)}`;
-    }
-
-    // 保存当前状态到localStorage
-    try {
-        localStorage.setItem('currentVideoTitle', vod_name || '未知视频');
-        localStorage.setItem('currentEpisodes', JSON.stringify(currentEpisodes));
-        localStorage.setItem('currentEpisodeIndex', episodeIndex);
-        localStorage.setItem('currentSourceCode', sourceCode || '');
-        localStorage.setItem('lastPlayTime', Date.now());
-        localStorage.setItem('lastSearchPage', currentPath);
-        localStorage.setItem('lastPageUrl', currentPath);  // 确保保存返回页面URL
-    } catch (e) {
-        console.error('保存播放状态失败:', e);
-    }
-
-    // 在当前标签页中打开播放页面
-    window.location.href = watchUrl;
+if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
+  params.set('back', currentPath);
 }
+
+const watchUrl = `watch.html?${params.toString()}`;
+
+// localStorage 保存（保留你原来的）
+try {
+  localStorage.setItem('currentVideoTitle', vod_name || '未知视频');
+  localStorage.setItem('currentEpisodes', JSON.stringify(currentEpisodes));
+  localStorage.setItem('currentEpisodeIndex', episodeIndex);
+  localStorage.setItem('currentSourceCode', sourceCode || '');
+  localStorage.setItem('lastPlayTime', Date.now());
+  localStorage.setItem('lastSearchPage', currentPath);
+  localStorage.setItem('lastPageUrl', currentPath);
+} catch (e) {
+  console.error('保存播放状态失败:', e);
+}
+
+// 新开标签 + 兜底
+const newWin = window.open(watchUrl, '_blank', 'noopener,noreferrer');
+if (newWin) newWin.opener = null;
+else window.location.href = watchUrl;
 
 // 弹出播放器页面
 function showVideoPlayer(url) {
