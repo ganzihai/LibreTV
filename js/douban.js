@@ -2,7 +2,7 @@ const DOUBAN_API_PROXY = 'https://movie.douban.cmliussss.com';
 const DOUBAN_IMG_PROXY = 'https://img.douban.cmliussss.com';
 
 let defaultMovieTags = ['热门', '最新', '经典', '豆瓣高分', '冷门佳片', '华语', '欧美', '韩国', '日本', '动作', '喜剧', '爱情', '科幻', '悬疑', '恐怖', '治愈'];
-let defaultTvTags = ['热门', '国产剧', '悬疑', '美剧', '英剧', '韩剧', '日剧', '港剧', '日本动画', '综艺', '纪录片'];
+let defaultTvTags = ['热门', '国产剧', '美剧', '英剧', '韩剧', '日剧', '港剧', '日本动画', '综艺', '纪录片'];
 
 let movieTags = [];
 let tvTags = [];
