@@ -985,8 +985,7 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0, vodId = '') {
         console.error('保存播放状态失败:', e);
     }
 
-    // 在当前标签页中打开播放页面
-    window.location.href = watchUrl;
+    window.open(watchUrl, '_blank');
 }
 
 // 弹出播放器页面
