@@ -1,37 +1,23 @@
 /**
  * functions/api.php/provide/vod/[[params]].js
- *
- * 苹果 CMS V10 兼容接口，供 TVBOX / OrionTV 等客户端调用。
- * 路径: /api.php/provide/vod/
- *
- * 支持参数:
- *   ?ac=videolist&wd=关键词          搜索
- *   ?ac=videolist&wd=关键词&pg=2     分页搜索
- *   ?ac=detail&ids=id1,id2           获取详情（id 格式: 源key__原始id）
- *   ?ac=list                         获取分类列表（返回固定分类）
- *
- * 环境变量:
- *   VOD_API_TIMEOUT  单个上游请求超时毫秒，默认 6000
- *   VOD_MAX_SOURCES  最多并发请求的源数量，默认 5
- *   VOD_ADULT        是否包含成人源 true/false，默认 false
+ * 苹果 CMS V10 兼容接口，供 TVBOX / FongMi/TV 等客户端调用。
  */
 
-// ---- 内置源列表（与 js/config.js 保持同步，去掉成人源）----
 const BUILTIN_SOURCES = {
-  dyttzy:  { api: 'http://caiji.dyttzyapi.com/api.php/provide/vod',   name: '电影天堂资源' },
-  ruyi:    { api: 'https://cj.rycjapi.com/api.php/provide/vod',        name: '如意资源' },
-  bfzy:    { api: 'https://bfzyapi.com/api.php/provide/vod',           name: '暴风资源' },
-  tyyszy:  { api: 'https://tyyszy.com/api.php/provide/vod',            name: '天涯资源' },
-  ffzy:    { api: 'http://ffzy5.tv/api.php/provide/vod',               name: '非凡影视' },
-  heimuer: { api: 'https://json.heimuer.xyz/api.php/provide/vod',      name: '黑木耳' },
-  zy360:   { api: 'https://360zy.com/api.php/provide/vod',             name: '360资源' },
-  wolong:  { api: 'https://wolongzyw.com/api.php/provide/vod',         name: '卧龙资源' },
-  jisu:    { api: 'https://jszyapi.com/api.php/provide/vod',           name: '极速资源' },
-  mozhua:  { api: 'https://mozhuazy.com/api.php/provide/vod',          name: '魔爪资源' },
-  mdzy:    { api: 'https://www.mdzyapi.com/api.php/provide/vod',       name: '魔都资源' },
-  yinghua: { api: 'https://m3u8.apiyhzy.com/api.php/provide/vod',     name: '樱花资源' },
-  baidu:   { api: 'https://api.apibdzy.com/api.php/provide/vod',      name: '百度云资源' },
-  wujin:   { api: 'https://api.wujinapi.me/api.php/provide/vod',      name: '无尽资源' },
+  dyttzy:  { api: 'http://caiji.dyttzyapi.com/api.php/provide/vod',  name: '电影天堂资源' },
+  ruyi:    { api: 'https://cj.rycjapi.com/api.php/provide/vod',       name: '如意资源' },
+  bfzy:    { api: 'https://bfzyapi.com/api.php/provide/vod',          name: '暴风资源' },
+  tyyszy:  { api: 'https://tyyszy.com/api.php/provide/vod',           name: '天涯资源' },
+  ffzy:    { api: 'http://ffzy5.tv/api.php/provide/vod',              name: '非凡影视' },
+  heimuer: { api: 'https://json.heimuer.xyz/api.php/provide/vod',     name: '黑木耳' },
+  zy360:   { api: 'https://360zy.com/api.php/provide/vod',            name: '360资源' },
+  wolong:  { api: 'https://wolongzyw.com/api.php/provide/vod',        name: '卧龙资源' },
+  jisu:    { api: 'https://jszyapi.com/api.php/provide/vod',          name: '极速资源' },
+  mozhua:  { api: 'https://mozhuazy.com/api.php/provide/vod',         name: '魔爪资源' },
+  mdzy:    { api: 'https://www.mdzyapi.com/api.php/provide/vod',      name: '魔都资源' },
+  yinghua: { api: 'https://m3u8.apiyhzy.com/api.php/provide/vod',    name: '樱花资源' },
+  baidu:   { api: 'https://api.apibdzy.com/api.php/provide/vod',     name: '百度云资源' },
+  wujin:   { api: 'https://api.wujinapi.me/api.php/provide/vod',     name: '无尽资源' },
 };
 
 const CORS_HEADERS = {
@@ -47,17 +33,11 @@ function jsonResp(data, status = 200) {
   });
 }
 
-function errorResp(msg, code = 1) {
-  return jsonResp({ code, msg, list: [], total: 0, pagecount: 0 });
-}
-
-/** 向单个上游源发请求，返回解析好的 JSON 或 null */
 async function fetchSource(apiUrl, params, timeout) {
-  const url = `${apiUrl}${params}`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
-    const resp = await fetch(url, {
+    const resp = await fetch(`${apiUrl}${params}`, {
       signal: ctrl.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; TVBOX/1.0)',
@@ -66,21 +46,14 @@ async function fetchSource(apiUrl, params, timeout) {
     });
     clearTimeout(timer);
     if (!resp.ok) return null;
-    const json = await resp.json();
-    return json;
+    return await resp.json();
   } catch {
     clearTimeout(timer);
     return null;
   }
 }
 
-/**
- * 将上游条目的 id 加上 sourceKey 前缀，防止不同源 id 冲突。
- * 格式: sourceKey__originalId
- */
-function prefixId(key, id) {
-  return `${key}__${id}`;
-}
+function prefixId(key, id) { return `${key}__${id}`; }
 
 function unprefixId(prefixedId) {
   const idx = prefixedId.indexOf('__');
@@ -88,20 +61,18 @@ function unprefixId(prefixedId) {
   return { key: prefixedId.slice(0, idx), id: prefixedId.slice(idx + 2) };
 }
 
-/** 规范化单个 vod 条目，补全 vod_id */
 function normalizeItem(item, sourceKey, sourceName) {
-  const id = prefixId(sourceKey, String(item.vod_id ?? item.id ?? ''));
   return {
-    vod_id: id,
-    vod_name: item.vod_name || item.name || '',
-    vod_pic: item.vod_pic || item.pic || '',
-    vod_remarks: item.vod_remarks || item.remarks || '',
-    type_name: item.type_name || item.type || '',
-    vod_year: item.vod_year || '',
-    vod_area: item.vod_area || '',
-    vod_actor: item.vod_actor || '',
+    vod_id:       prefixId(sourceKey, String(item.vod_id ?? item.id ?? '')),
+    vod_name:     item.vod_name     || item.name      || '',
+    vod_pic:      item.vod_pic      || item.pic       || '',
+    vod_remarks:  item.vod_remarks  || item.remarks   || '',
+    type_name:    item.type_name    || item.type      || '',
+    vod_year:     item.vod_year     || '',
+    vod_area:     item.vod_area     || '',
+    vod_actor:    item.vod_actor    || '',
     vod_director: item.vod_director || '',
-    vod_content: item.vod_content || '',
+    vod_content:  item.vod_content  || '',
     vod_play_url: item.vod_play_url || '',
     vod_play_from: item.vod_play_from || sourceName,
     source: sourceName,
@@ -111,103 +82,81 @@ function normalizeItem(item, sourceKey, sourceName) {
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // CORS 预检
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
 
-  const timeout = parseInt(env.VOD_API_TIMEOUT || '6000');
-  const maxSources = parseInt(env.VOD_MAX_SOURCES || '5');
+  const timeout    = parseInt(env.VOD_API_TIMEOUT || '8000');
+  const maxSources = parseInt(env.VOD_MAX_SOURCES  || '8');
 
   const url = new URL(request.url);
-  const ac = url.searchParams.get('ac') || '';
-  const wd = url.searchParams.get('wd') || '';
+  const ac  = url.searchParams.get('ac')  || '';
+  const wd  = url.searchParams.get('wd')  || '';
   const ids = url.searchParams.get('ids') || '';
-  const pg = url.searchParams.get('pg') || '1';
+  const pg  = url.searchParams.get('pg')  || '1';
 
-  // 固定分类列表
-  if (ac === 'list' || (!ac && !wd && !ids)) {
+  // --- 分类列表 (ac=list 或无参数) ---
+  if (!ac || ac === 'list') {
     return jsonResp({
-      code: 1,
-      msg: 'OK',
-      list: [
+      code: 1, msg: 'OK',
+      class: [
         { type_id: 1, type_name: '电影' },
         { type_id: 2, type_name: '电视剧' },
         { type_id: 3, type_name: '综艺' },
         { type_id: 4, type_name: '动漫' },
       ],
+      list: [],
     });
   }
 
-  // 搜索
+  // --- 搜索 (ac=videolist&wd=...) ---
   if (ac === 'videolist' && wd) {
     const sources = Object.entries(BUILTIN_SOURCES).slice(0, maxSources);
-    const params = `?ac=videolist&wd=${encodeURIComponent(wd)}&pg=${pg}`;
+    const params  = `?ac=videolist&wd=${encodeURIComponent(wd)}&pg=${pg}`;
 
     const results = await Promise.all(
-      sources.map(([key, src]) => fetchSource(src.api, params, timeout)
-        .then(json => ({ key, name: src.name, json }))
+      sources.map(([key, src]) =>
+        fetchSource(src.api, params, timeout).then(json => ({ key, name: src.name, json }))
       )
     );
 
     const list = [];
     let total = 0;
-
     for (const { key, name, json } of results) {
       if (!json || !Array.isArray(json.list)) continue;
       total += parseInt(json.total || json.list.length || 0);
-      for (const item of json.list) {
-        list.push(normalizeItem(item, key, name));
-      }
+      for (const item of json.list) list.push(normalizeItem(item, key, name));
     }
 
-    return jsonResp({
-      code: 1,
-      msg: 'OK',
-      page: parseInt(pg),
-      pagecount: 1,
-      limit: list.length,
-      total,
-      list,
-    });
+    return jsonResp({ code: 1, msg: 'OK', page: parseInt(pg), pagecount: 1, limit: list.length, total, list });
   }
 
-  // 详情
+  // --- 详情 (ac=detail&ids=...) --- FIX: 对上游用正确的 ac=detail 参数
   if (ac === 'detail' && ids) {
     const idList = ids.split(',').map(s => s.trim()).filter(Boolean);
 
-    // 按 sourceKey 分组
     const bySource = {};
-    for (const prefixedId of idList) {
-      const { key, id } = unprefixId(prefixedId);
+    for (const pid of idList) {
+      const { key, id } = unprefixId(pid);
       if (!key || !BUILTIN_SOURCES[key]) continue;
       if (!bySource[key]) bySource[key] = [];
-      bySource[key].push({ prefixedId, id });
+      bySource[key].push(id);
     }
 
     const list = [];
-
     await Promise.all(
-      Object.entries(bySource).map(async ([key, items]) => {
-        const src = BUILTIN_SOURCES[key];
-        const rawIds = items.map(i => i.id).join(',');
-        const params = `?ac=videolist&ids=${encodeURIComponent(rawIds)}`;
-        const json = await fetchSource(src.api, params, timeout);
+      Object.entries(bySource).map(async ([key, rawIds]) => {
+        const src    = BUILTIN_SOURCES[key];
+        // 使用正确的 ac=detail 向上游查详情
+        const params = `?ac=detail&ids=${encodeURIComponent(rawIds.join(','))}`;
+        const json   = await fetchSource(src.api, params, timeout);
         if (!json || !Array.isArray(json.list)) return;
-        for (const item of json.list) {
-          list.push(normalizeItem(item, key, src.name));
-        }
+        for (const item of json.list) list.push(normalizeItem(item, key, src.name));
       })
     );
 
-    return jsonResp({
-      code: 1,
-      msg: 'OK',
-      list,
-      total: list.length,
-      pagecount: 1,
-    });
+    return jsonResp({ code: 1, msg: 'OK', list, total: list.length, pagecount: 1 });
   }
 
-  return errorResp('未知请求参数，请检查 ac / wd / ids');
+  return jsonResp({ code: 0, msg: '未知参数', list: [], total: 0, pagecount: 0 });
 }
