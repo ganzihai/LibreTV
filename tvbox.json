@@ -3,15 +3,6 @@
   "wallpaper": "",
   "sites": [
     {
-      "key": "zznuo_all",
-      "name": "🎬 zznuo聚合(21源)",
-      "type": 1,
-      "api": "https://v.zznuo.com/api.php/provide/vod/",
-      "searchable": 1,
-      "quickSearch": 1,
-      "filterable": 1
-    },
-    {
       "key": "dyttzy",
       "name": "电影天堂资源",
       "type": 1,
