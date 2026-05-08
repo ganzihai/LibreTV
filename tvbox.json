@@ -1,0 +1,17 @@
+{
+  "spider": "",
+  "wallpaper": "",
+  "sites": [
+    {
+      "key": "zznuo_vod",
+      "name": "🎬 zznuo聚合影视",
+      "type": 1,
+      "api": "https://v.zznuo.com/api.php/provide/vod",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1
+    }
+  ],
+  "rules": [],
+  "lives": []
+}
