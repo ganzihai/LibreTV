@@ -6,7 +6,26 @@
       "key": "zznuo_vod",
       "name": "🎬 zznuo聚合影视",
       "type": 1,
-      "api": "https://v.zznuo.com/api.php/provide/vod",
+      "api": "https://v.zznuo.com/api.php/provide/vod/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "ext": ""
+    },
+    {
+      "key": "heimuer",
+      "name": "黑木耳(备用)",
+      "type": 1,
+      "api": "https://json.heimuer.xyz/api.php/provide/vod/",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1
+    },
+    {
+      "key": "wolong",
+      "name": "卧龙(备用)",
+      "type": 1,
+      "api": "https://wolongzyw.com/api.php/provide/vod/",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 1
